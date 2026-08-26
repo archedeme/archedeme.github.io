@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>HANDOFF 工厂自检工具</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#1a1d24; --card2:#222631; --line:#2c313c;
+    --txt:#e6e9ef; --sub:#9aa3b2; --acc:#4f8cff; --acc2:#36d399;
+    --err:#ff5c6c; --warn:#ffb454; --ok:#36d399;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-text-size-adjust:100%}
+  .wrap{max-width:520px; margin:0 auto; padding:14px 14px calc(20px + env(safe-area-inset-bottom)); }
+  header{display:flex; align-items:center; gap:10px; padding:6px 2px 14px}
+  header .logo{width:34px; height:34px; border-radius:9px;
+    background:linear-gradient(135deg,#4f8cff,#36d399); display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:16px; color:#06121f}
+  header h1{font-size:18px; margin:0; font-weight:700}
+  header .v{font-size:11px; color:var(--sub); margin-top:2px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:12px}
+  .card h2{font-size:14px; margin:0 0 12px; color:var(--txt); display:flex; align-items:center; gap:7px; font-weight:600}
+  .card h2 .dot{width:7px; height:7px; border-radius:50%; background:var(--acc)}
+  label{display:block; font-size:12px; color:var(--sub); margin:10px 0 5px}
+  input,select{width:100%; background:var(--card2); border:1px solid var(--line); color:var(--txt);
+    border-radius:10px; padding:11px 12px; font-size:15px; outline:none; font-family:inherit}
+  input:focus,select:focus{border-color:var(--acc)}
+  input[type=file]{padding:9px; font-size:13px}
+  .row{display:flex; gap:10px}
+  .row > *{flex:1}
+  button{width:100%; border:none; border-radius:11px; padding:13px; font-size:15px; font-weight:600;
+    color:#06121f; background:linear-gradient(135deg,#4f8cff,#6aa1ff); cursor:pointer; margin-top:12px;
+    transition:transform .05s ease, opacity .2s}
+  button:active{transform:scale(.98)}
+  button.sec{background:var(--card2); color:var(--txt); border:1px solid var(--line)}
+  button.good{background:linear-gradient(135deg,#36d399,#2bb98a); color:#04130c}
+  button.warn{background:linear-gradient(135deg,#ffb454,#ff9a3d); color:#1a0f00}
+  button:disabled{opacity:.45; cursor:not-allowed}
+  .btn2{display:flex; gap:10px}
+  .btn2 button{margin-top:0}
+  .state{font-size:13px; color:var(--sub); margin-top:10px; word-break:break-all}
+  .state b{color:var(--acc2)}
+  .badge{display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600}
+  .badge.off{background:#3a2024; color:var(--err)}
+  .badge.on{background:#143826; color:var(--ok)}
+  .verbadge{display:inline-block; margin-left:8px; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; background:#1e2a3a; color:#8ab4f8; vertical-align:middle}
+  .fileinfo{font-size:12px; color:var(--sub); margin-top:8px; line-height:1.6; word-break:break-all}
+  .progwrap{height:10px; background:var(--card2); border-radius:6px; overflow:hidden; margin-top:12px; border:1px solid var(--line)}
+  .prog{height:100%; width:0%; background:linear-gradient(90deg,#4f8cff,#36d399); transition:width .15s}
+  .progtext{font-size:12px; color:var(--sub); margin-top:6px; text-align:right}
+  .log{background:#0b0d11; border:1px solid var(--line); border-radius:10px; padding:10px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:11.5px; line-height:1.65;
+    max-height:230px; overflow:auto; color:#c5ccd8}
+  .log .l{white-space:pre-wrap; word-break:break-all}
+  .log .ok{color:var(--ok)} .log .err{color:var(--err)} .log .warn{color:var(--warn)} .log .t{color:#5b6473}
+  details{margin-top:6px} summary{font-size:12px; color:var(--acc); cursor:pointer; padding:6px 0}
+  details p,details li{font-size:12px; color:var(--sub); line-height:1.7}
+  details code{background:var(--card2); padding:1px 5px; border-radius:4px; color:#cdd6e4}
+  .hint{font-size:11px; color:var(--warn); margin-top:6px; display:none}
+  .tab{display:flex; gap:6px; margin-bottom:12px}
+  .tab button{margin-top:0; padding:9px; font-size:13px; background:var(--card2); color:var(--sub); border:1px solid var(--line)}
+  .tab button.act{background:var(--acc); color:#06121f}
+  .seg{display:none} .seg.act{display:block}
+  .note{font-size:11px; color:var(--sub); margin-top:8px; line-height:1.6}
+  .otar{display:none; margin-top:12px; padding:14px; border-radius:12px; font-size:15px; font-weight:700; text-align:center; line-height:1.6}
+  .otar.ok{display:block; background:#143826; border:1px solid #1f5a40; color:#a7f0cf}
+  .otar.err{display:block; background:#3a2024; border:1px solid #5a2b30; color:#ffb4bc}
+  .otar.warn{display:block; background:#3a3020; border:1px solid #5a4a2b; color:#ffd4a7}
+  .envbar{display:none; margin-bottom:12px; padding:11px 13px; border-radius:12px; font-size:13px; line-height:1.65}
+  .envbar.bad{display:block; background:#3a2024; border:1px solid #5a2b30; color:#ffb4bc}
+  .envbar.ok{display:block; background:#143826; border:1px solid #1f5a40; color:#a7f0cf}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">H</div>
+    <div>
+      <h1>HANDOFF 工厂自检</h1>
+      <div class="v">Web Bluetooth · 产线测试 · V1.1</div>
+    </div>
+  </header>
+
+  <!-- 环境自检 -->
+  <div id="envbar" class="envbar"></div>
+
+  <!-- 连接 -->
+  <div class="card">
+    <h2><span class="dot"></span>设备连接</h2>
+    <button id="btnConnect">选择并连接设备</button>
+    <div class="state">
+      状态：<span id="connBadge" class="badge off">未连接</span>
+      <span id="connState"></span>
+    </div>
+    <div class="note">点击后唤起系统选择器，<b>按 HANDOFF 前缀 / OTA 服务过滤</b>搜索；若始终搜索不到，请确认设备已上电并处于广播状态。</div>
+  </div>
+
+  <!-- 生产测试 -->
+  <div class="card">
+    <h2><span class="dot"></span>生产测试（出厂自检）</h2>
+    <button id="btnTest" class="warn">开始生产测试</button>
+    <div class="state" id="testState">未测试</div>
+    <div class="fileinfo" id="testResult"></div>
+    <div class="note">流程：发送测试指令 → 设备立即响<b>蜂鸣(BEEP)</b>（靠耳朵判断）→ 开启 <b>CAN 收数窗口约 2.5s</b>（期间有 CAN 数据进入即判 CAN OK）→ 设备回传结果。收到回传即证明 <b>BLE 链路正常</b>。CAN 测试需在生产时给设备 CAN 总线灌一帧数据。</div>
+  </div>
+
+  <!-- 日志 -->
+  <div class="card">
+    <h2><span class="dot"></span>运行日志</h2>
+    <div class="log" id="log"></div>
+    <button id="btnClearLog" class="sec">清除日志</button>
+  </div>
+
+  <details>
+    <summary>技术说明 / 浏览器兼容性</summary>
+    <p><b>兼容性：</b>只要浏览器实现了 <b>Web Bluetooth</b> 即可使用 —— <b>Android Chrome</b>、桌面 <b>Chrome / Edge</b>、<b>HarmonyOS 上的 Chrome</b> 等。本页<b>不做浏览器限制</b>：连接是否可用由系统/浏览器自身决定，若不支持会直接提示错误而非被拦截。<b>iOS / Safari</b> 不支持 Web Bluetooth（需走原生 App）。</p>
+    <p><b>扫描：</b>Web Bluetooth 没有后台扫描，点"连接"唤起系统选择器，只列出本设备。</p>
+  </details>
+</div>
+
+<script>
+"use strict";
+// ---- 协议常量 ----
+const OTA_SERV='0000ff10-0000-1000-8000-00805f9b34fb';
+const OTA_CHAR='0000ff11-0000-1000-8000-00805f9b34fb';
+const CFG_SERV='0000ffe0-0000-1000-8000-00805f9b34fb';
+const CFG_CHAR='0000ffe1-0000-1000-8000-00805f9b34fb';
+const DIS_SERV='0000180a-0000-1000-8000-00805f9b34fb';   // Device Information Service
+const VER_CHAR='00002a28-0000-1000-8000-00805f9b34fb';   // Software Revision String（固件版本）
+const CFG_OP_TEST=0x06;
+
+let device=null, server=null, otaChar=null, cfgChar=null, connected=false, fwVer='', connecting=false;
+
+
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const hex=u=>Array.from(u).map(b=>b.toString(16).padStart(2,'0')).join('');
+
+
+function log(msg,cls){
+  const el=$('log'); const d=document.createElement('div');
+  d.className='l'+(cls?(' '+cls):'');
+  const t=new Date().toLocaleTimeString('zh-CN',{hour12:false});
+  d.textContent='['+t+'] '+msg;
+  el.appendChild(d); el.scrollTop=el.scrollHeight;
+}
+
+
+
+
+// ---- BLE 收发 ----
+async function writeRaw(char,buf){
+  try{ await char.writeValue(buf); }
+  catch(e){ await char.writeValueWithoutResponse(buf); }
+}
+
+
+// ---- 配置 Notify 推送 ----
+let _testNotifyResolve=null;
+function onCfgNotify(ev){
+  const v=new Uint8Array(ev.target.value.buffer);
+  if(v.length>=2 && v[0]===CFG_OP_TEST){
+    if(_testNotifyResolve){ _testNotifyResolve(v); _testNotifyResolve=null; }
+    else log('收到测试结果包 '+v.length+'B: '+hex(v),'ok');
+    return;
+  }
+}
+
+// ---- 环境自检 ----
+function checkEnv(){
+  const bar=$('envbar');
+  const problems=[];
+  if(window.self!==window.top)
+    problems.push('本页面被嵌入在第三方网页(iframe)中，浏览器会禁用 Web Bluetooth。请用浏览器直接打开本文件的原始链接，不要用微信/QQ 内置浏览器，也不要用会套框架的免费托管。');
+  if(!window.isSecureContext)
+    problems.push('当前不是安全上下文（需 https:// 或 localhost），蓝牙 API 被禁用。');
+  if(!navigator.bluetooth)
+    problems.push('当前浏览器未提供 Web Bluetooth：可能是被嵌入框架屏蔽、或用了微信等内置浏览器、或本身就是不支持的浏览器(iOS Safari 等)。请用 Android Chrome / 桌面 Chrome·Edge 直接访问。');
+  if(problems.length){
+    bar.className='envbar bad';
+    bar.innerHTML='⚠️ 蓝牙不可用，原因：<br>• '+problems.join('<br>• ')+'<br><br>✅ 解决办法：把本 .html 文件放到<b>能直接以顶层页面打开的 https 站点</b>（如你自己的域名、GitHub Pages、Netlify），再用 <b>Android Chrome / 桌面 Chrome·Edge</b> 打开。';
+  }else{
+    bar.className='envbar ok';
+    bar.innerHTML='✅ 环境检测通过：安全上下文 + Web Bluetooth 可用。点击"选择并连接设备"即可。';
+  }
+}
+
+// ---- 连接 ----
+async function connect(){
+  if(!navigator.bluetooth){
+    log('无法访问蓝牙 API：当前不是安全上下文（请通过 https:// 或 localhost 打开本页），或浏览器不支持 Web Bluetooth。','err');
+    alert('当前浏览器/环境不支持 Web Bluetooth。\n常见原因：\n• 通过微信/QQ 内置浏览器打开\n• 页面被嵌入第三方框架(iframe)\n• 未使用 https 或浏览器本身不支持\n\n请用 Android Chrome / 桌面 Chrome·Edge 直接打开本页链接。');
+    return;
+  }
+  if(connecting) return;   /* 防重入：连接进行中再点按钮不叠加第二个选择器 */
+  connecting=true;
+  try{
+    /* 选择器带 namePrefix/services 过滤器，只列出 HANDOFF 设备。 */
+    const dev=await navigator.bluetooth.requestDevice({
+      filters:[
+        { namePrefix:'HANDOFF' },
+        { services:[OTA_SERV] }
+      ],
+      optionalServices:[OTA_SERV,CFG_SERV,DIS_SERV]
+    });
+    /* 刚断开重连时：设备重启广播需 1~2s；且即使 gatt.connect 返回成功，链路也可能在服务发现阶段掉线
+     * —— 连接+OTA服务发现 整体纳入重试，最多 3 次，退避 1.5s/2.5s。全程用局部 dev/srv。 */
+    let lastErr=null, srv=null, oc=null;
+    for(let i=0;i<3;i++){
+      try{
+        if(!dev.gatt.connected) srv=await dev.gatt.connect();
+        const s1=await srv.getPrimaryService(OTA_SERV);
+        oc=await s1.getCharacteristic(OTA_CHAR);
+        lastErr=null; break;
+      }catch(e){
+        lastErr=e;
+        if(i<2){ log('连接/服务发现失败（第'+(i+1)+'次）：'+(e.message||e)+'，设备重启中，自动重试…','warn'); await sleep(1500+i*1000); }
+      }
+    }
+    if(lastErr) throw lastErr;
+    device=dev; server=srv; otaChar=oc;
+    try{ const s2=await server.getPrimaryService(CFG_SERV); cfgChar=await s2.getCharacteristic(CFG_CHAR);
+      if(cfgChar.properties && cfgChar.properties.notify){
+        await cfgChar.startNotifications();
+        cfgChar.addEventListener('characteristicvaluechanged', onCfgNotify);
+      }
+    }
+    catch(e){ log('未找到配置服务 0xFFE0（仅 OTA 可用，可忽略）','warn'); }
+    device.addEventListener('gattserverdisconnected',onDisconnect);
+    connected=true;
+    $('connBadge').className='badge on'; $('connBadge').textContent='已连接';
+    $('connState').innerHTML='<b>'+(device.name||device.id)+'</b>';
+    $('btnConnect').textContent='断开连接';
+    log('已连接 '+(device.name||device.id));
+    // 连上后读固件版本（0x180A/0x2A28，devinfoservice.c 提供）。
+    // 稳定性处理：连接刚建立时 WCH 轻量栈一次只处理一个属性操作，若与 notify 订阅并发易断连
+    // —— 延迟 1.5s 错峰，执行前校验仍是当前连接，失败仅对"操作进行中"重试一次。
+    const curServer=server, curDevice=device;
+    const readVer=async(retry)=>{
+      if(!connected || !curDevice || curDevice.gatt.connected===false || server!==curServer) return;
+      try{
+        const sd=await curServer.getPrimaryService(DIS_SERV);
+        const cd=await sd.getCharacteristic(VER_CHAR);
+        const dv=await cd.readValue();
+        const ver=new TextDecoder().decode(dv).replace(/\0/g,'').trim();
+        if(ver && connected && server===curServer){
+          fwVer=ver;
+          $('connState').innerHTML='<b>'+(curDevice.name||curDevice.id)+'</b><span class="verbadge">'+ver+'</span>';
+          log('固件版本(0x2A28)：'+ver);
+        }
+      }catch(e){
+        /* GATT 操作忙或旧固件无 DevInfo：只对"操作进行中"类错误重试一次，其余静默（旧固件属正常） */
+        if(!retry && connected && server===curServer && /in progress|busy/i.test(String(e.message||e)))
+          setTimeout(()=>readVer(true), 2000);
+      }
+    };
+    setTimeout(()=>readVer(false), 1500);
+  }catch(e){
+    let msg='连接失败：'+(e.message||e);
+    if(/Android/i.test(navigator.userAgent)){
+      if(/Chrome/i.test(navigator.userAgent)){
+        msg+='\n[Android·Chrome] 若选择器未弹出，请确认：①用 Chrome 直接打开本链接（点微信右上角 ⋮ → 在浏览器打开，选 Chrome）；②已在系统设置里授予 Chrome「位置信息」权限（Android 上 Web Bluetooth 扫描 BLE 必须用它，桌面端不需要）。';
+      }else{
+        msg+='\n[Android] 当前不是 Chrome。华为/HarmonyOS 自带浏览器、微信内置浏览器均不含 Web Bluetooth，请安装并用 Google Chrome 打开本链接。';
+      }
+    }
+    log(msg,'err');
+  }finally{
+    connecting=false;   /* 无论成败都放行，允许下次点击 */
+  }
+}
+function onDisconnect(){
+  connected=false; otaChar=null; cfgChar=null; server=null; device=null; fwVer='';
+  cfgNotifyBuf=[]; cfgNotifyTotal=0; _testNotifyResolve=null;
+  $('connBadge').className='badge off'; $('connBadge').textContent='未连接';
+  $('connState').textContent=''; $('btnConnect').textContent='选择并连接设备';
+  log('设备已断开','warn');
+}
+async function disconnect(){
+  if(device&&device.gatt.connected){ try{ await device.gatt.disconnect(); }catch(e){} }
+  onDisconnect();
+}
+
+
+
+
+
+// ---- 生产测试 ----
+async function runTest(){
+  if(!cfgChar){ alert('未连接设备（无配置服务 0xFFE0）'); return; }
+  if(!otaChar){ alert('未连接 OTA 通道，无法接收测试结果'); return; }
+  try{
+    await writeRaw(cfgChar, new Uint8Array([CFG_OP_TEST]));
+    log('已发送生产测试指令 0x06，等待设备回传…','ok');
+    $('testState').innerHTML='<b style="color:var(--warn)">测试中…</b> 蜂鸣已触发，请听声；正在等待 CAN 数据(约 2.5s)';
+    $('testResult').textContent='';
+    const got = await new Promise((resolve)=>{
+      let settled=false;
+      _testNotifyResolve=(d)=>{ if(!settled){ settled=true; resolve(d); } };
+      setTimeout(async ()=>{
+        for(let i=0;i<8;i++){
+          if(settled) return;
+          await sleep(500);
+          const v=await otaChar.readValue().catch(()=>null);
+          if(!v) continue;
+          const d=new Uint8Array(v.buffer);
+          if(d.length>=2 && d[0]===CFG_OP_TEST){ if(!settled){ settled=true; _testNotifyResolve=null; resolve(d); } return; }
+        }
+        if(!settled){ settled=true; _testNotifyResolve=null; resolve(null); }
+      }, 500);
+    });
+    if(!got){
+      $('testState').innerHTML='<span class="badge off">超时</span> 未收到设备回传';
+      log('生产测试超时：未收到设备回传（请确认固件已支持 0x06 测试指令）','err');
+      return;
+    }
+    const st=got[1];
+    const canOk = !!(st & 0x01);
+    const beepOn = !!(st & 0x02);
+    $('testState').innerHTML='<span class="badge on">已完成</span> BLE 链路正常（已收到回传）';
+    let r='';
+    r += (canOk ? '✅ CAN：正常（窗口内检测到数据）\n' : '❌ CAN：异常（窗口内未收到任何 CAN 数据）\n');
+    r += (beepOn ? '🔊 BEEP：已触发，请凭耳朵判断蜂鸣器是否响\n' : '⚠️ BEEP：未触发\n');
+    r += '📶 BLE：正常（已收到设备回传，证明蓝牙链路 OK）';
+    $('testResult').textContent=r;
+    log('生产测试结果：CAN='+(canOk?'OK':'ERR')+'  BEEP='+(beepOn?'triggered':'no'), canOk?'ok':'err');
+  }catch(e){ log('生产测试出错：'+(e.message||e),'err'); }
+}
+
+
+
+// ---- 绑定事件 ----
+try {
+  $('btnConnect').onclick=()=> connected?disconnect():connect();
+  if($('btnClearLog')) $('btnClearLog').onclick=()=>{ $('log').innerHTML=''; };
+  if($('btnTest')) $('btnTest').onclick=()=>runTest();
+} catch(_e) { }
+
+checkEnv();
+log('就绪。请先连接设备，再开始生产测试。');
+</script>
+
+</body></html>
