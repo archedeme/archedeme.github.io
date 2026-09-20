@@ -79,7 +79,7 @@
     <div class="logo">H</div>
     <div>
       <h1>HANDOFF 工厂自检</h1>
-      <div class="v">Web Bluetooth · 产线测试 · V1.1</div>
+      <div class="v">Web Bluetooth · 产线测试 · V1.1A</div>
     </div>
   </header>
 
@@ -273,7 +273,7 @@ async function connect(){
 }
 function onDisconnect(){
   connected=false; otaChar=null; cfgChar=null; server=null; device=null; fwVer='';
-  cfgNotifyBuf=[]; cfgNotifyTotal=0; _testNotifyResolve=null;
+  _testNotifyResolve=null;   /* 清掉挂起的生产测试回调，防复位后误触发 */
   $('connBadge').className='badge off'; $('connBadge').textContent='未连接';
   $('connState').textContent=''; $('btnConnect').textContent='选择并连接设备';
   log('设备已断开','warn');
